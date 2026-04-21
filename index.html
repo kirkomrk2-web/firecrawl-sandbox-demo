@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Interactive demo dashboard showcasing the Firecrawl Browser Sandbox: launch sessions, navigate to Hacker News, execute Node.js code, and inspect results." />
+<title>Firecrawl Browser Sandbox — Interactive Demo</title>
+
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&f[]=satoshi@400,500,700&f[]=jetbrains-mono@400,500,700&display=swap" rel="stylesheet" />
+
+<style>
+/* ============================================================
+   DESIGN TOKENS — Firecrawl Sandbox Theme (dark + flame accent)
+============================================================ */
+:root {
+  /* Palette */
+  --bg-0: #07080a;
+  --bg-1: #0c0e12;
+  --bg-2: #11141a;
+  --bg-3: #161a22;
+  --bg-4: #1d222c;
+  --border-1: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.10);
+  --border-3: rgba(255,255,255,0.18);
+
+  --text-1: #f3f5f8;
+  --text-2: #b9c0cc;
+  --text-3: #7d8595;
+  --text-4: #525967;
+
+  /* Firecrawl flame */
+  --flame-50:  #fff4ed;
+  --flame-100: #ffe4d0;
+  --flame-300: #ffaa6c;
+  --flame-400: #ff8a3d;
+  --flame-500: #ff6b1a;   /* primary */
+  --flame-600: #e6520a;
+  --flame-700: #b83a05;
+  --flame-glow: rgba(255,107,26,0.45);
+
+  --accent-cyan: #4fd1c5;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+  --accent-yellow: #f59e0b;
+
+  /* Fonts */
+  --font-display: 'Cabinet Grotesk', system-ui, sans-serif;
+  --font-body: 'Satoshi', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+  --text-4xl: 3.5rem;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+
+  /* Transitions */
+  --t-fast: 120ms cubic-bezier(.2,.6,.2,1);
+  --t-med:  240ms cubic-bezier(.2,.6,.2,1);
+  --t-slow: 420ms cubic-bezier(.2,.6,.2,1);
+
+  /* Shadows */
+  --sh-card: 0 1px 0 rgba(255,255,255,0.03) inset, 0 20px 60px -20px rgba(0,0,0,0.6);
+  --sh-glow: 0 0 0 1px rgba(255,107,26,0.35), 0 12px 40px -8px var(--flame-glow);
+
+  /* Widths */
+  --content-w: 1240px;
+}
+
+/* ============================================================
+   RESET
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  color: var(--text-1);
+  background: var(--bg-0);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+h1,h2,h3,h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.1; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; border: 0; background: transparent; color: inherit; }
+img, svg { display: block; max-width: 100%; }
+code, pre, kbd { font-family: var(--font-mono); }
+:focus-visible { outline: 2px solid var(--flame-500); outline-offset: 2px; border-radius: var(--r-sm); }
+::selection { background: var(--flame-500); color: #000; }
+
+/* ============================================================
+   BACKGROUND AMBIENT
+============================================================ */
+.bg-ambient {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(800px 500px at 15% -10%, rgba(255,107,26,0.14), transparent 60%),
+    radial-gradient(700px 420px at 90% 10%, rgba(79,209,197,0.08), transparent 60%),
+    radial-gradient(600px 400px at 50% 110%, rgba(255,107,26,0.08), transparent 60%);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.4;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 75%);
+}
+
+/* ============================================================
+   LAYOUT
+============================================================ */
+.container { max-width: var(--content-w); margin: 0 auto; padding: 0 var(--space-6); }
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus { left: var(--space-4); top: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--bg-3); border: 1px solid var(--border-3); border-radius: var(--r-md); z-index: 100; }
+
+/* ============================================================
+   HEADER
+============================================================ */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(7,8,10,0.7);
+  border-bottom: 1px solid var(--border-1);
+}
+.site-header .container {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+}
+.brand { display: flex; align-items: center; gap: var(--space-3); }
+.brand-logo {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--flame-500), var(--flame-700));
+  display: grid; place-items: center;
+  box-shadow: 0 6px 20px -6px var(--flame-glow);
+}
+.brand-logo svg { width: 18px; height: 18px; }
+.brand-name { font-family: var(--font-display); font-weight: 800; font-size: var(--text-md); letter-spacing: -0.01em; }
+.brand-sub { font-size: var(--text-xs); color: var(--text-3); margin-left: var(--space-2); padding: 2px 8px; border: 1px solid var(--border-2); border-radius: 999px; }
+
+.header-nav { display: flex; align-items: center; gap: var(--space-5); }
+.header-nav a { font-size: var(--text-sm); color: var(--text-2); transition: color var(--t-fast); }
+.header-nav a:hover { color: var(--text-1); }
+.header-status {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-xs); color: var(--text-2);
+  padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 999px;
+  background: var(--bg-2);
+}
+.pulse-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent-green); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); animation: pulse 2s infinite; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+@media (max-width: 720px) {
+  .header-nav { display: none; }
+}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero { padding: var(--space-16) 0 var(--space-10); }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-xs); font-weight: 500; color: var(--flame-300);
+  padding: 6px 12px; border: 1px solid rgba(255,107,26,0.25); border-radius: 999px;
+  background: rgba(255,107,26,0.08);
+  margin-bottom: var(--space-5);
+}
+.hero h1 {
+  font-size: clamp(2.25rem, 5vw + 0.5rem, 3.5rem);
+  max-width: 900px;
+  margin-bottom: var(--space-5);
+}
+.hero h1 .grad {
+  background: linear-gradient(90deg, var(--flame-400), var(--flame-600) 60%, #ffd4a3);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-lede { color: var(--text-2); font-size: var(--text-lg); max-width: 720px; margin-bottom: var(--space-8); }
+.hero-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 12px 18px; border-radius: var(--r-md);
+  font-weight: 600; font-size: var(--text-sm);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  border: 1px solid transparent;
+}
+.btn-primary { background: linear-gradient(180deg, var(--flame-400), var(--flame-600)); color: #0b0b0b; box-shadow: var(--sh-glow); }
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-ghost { background: var(--bg-3); color: var(--text-1); border-color: var(--border-2); }
+.btn-ghost:hover { background: var(--bg-4); border-color: var(--border-3); }
+.btn svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   SESSION CARD
+============================================================ */
+.session-panel {
+  margin-top: var(--space-10);
+  border: 1px solid var(--border-2);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--sh-card);
+}
+.session-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-1);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+.session-head h2 { font-size: var(--text-md); font-family: var(--font-body); font-weight: 600; letter-spacing: 0; }
+.session-traffic { display: flex; gap: 6px; }
+.session-traffic span { width: 11px; height: 11px; border-radius: 999px; background: var(--bg-4); }
+.session-traffic span:nth-child(1) { background: #ff5f57; }
+.session-traffic span:nth-child(2) { background: #febc2e; }
+.session-traffic span:nth-child(3) { background: #28c840; }
+
+.session-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px; background: var(--border-1);
+}
+.session-cell { padding: var(--space-5) var(--space-6); background: var(--bg-2); }
+.session-cell .label { font-size: var(--text-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); }
+.session-cell .value { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-1); word-break: break-all; }
+.session-cell .value .chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: var(--text-xs); color: var(--accent-green); padding: 3px 8px; border: 1px solid rgba(16,185,129,0.3); border-radius: 999px; background: rgba(16,185,129,0.08); }
+.session-cell .value .chip .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+.session-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-1);
+  background: var(--bg-1);
+  flex-wrap: wrap;
+}
+.session-footer .urls { display: flex; gap: var(--space-3); flex-wrap: wrap; font-family: var(--font-mono); font-size: var(--text-xs); }
+.session-footer .urls a { color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border-2); border-radius: var(--r-sm); transition: all var(--t-fast); }
+.session-footer .urls a:hover { color: var(--flame-400); border-color: var(--flame-500); background: rgba(255,107,26,0.06); }
+.session-footer .countdown { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); }
+.session-footer .countdown strong { color: var(--flame-300); font-weight: 500; }
+
+@media (max-width: 900px) {
+  .session-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+/* ============================================================
+   SECTION
+============================================================ */
+.section { padding: var(--space-16) 0; }
+.section-head { margin-bottom: var(--space-8); }
+.section-eyebrow {
+  font-size: var(--text-xs); font-weight: 600; color: var(--flame-400);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: var(--space-3);
+  display: flex; align-items: center; gap: var(--space-3);
+}
+.section-eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--flame-500); }
+.section h2 { font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem); max-width: 680px; }
+.section .section-lede { color: var(--text-2); margin-top: var(--space-3); max-width: 680px; font-size: var(--text-md); }
+
+/* ============================================================
+   SPLIT (code + live view)
+============================================================ */
+.split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: var(--space-6); }
+@media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   TERMINAL / CODE BLOCKS
+============================================================ */
+.terminal {
+  background: #07080a;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--sh-card);
+  display: flex; flex-direction: column;
+}
+.terminal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-1);
+}
+.terminal-title { display: flex; align-items: center; gap: var(--space-3); }
+.terminal-title .traffic { display: flex; gap: 6px; }
+.terminal-title .traffic span { width: 11px; height: 11px; border-radius: 999px; }
+.terminal-title .traffic span:nth-child(1) { background: #ff5f57; }
+.terminal-title .traffic span:nth-child(2) { background: #febc2e; }
+.terminal-title .traffic span:nth-child(3) { background: #28c840; }
+.terminal-title .name { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3); }
+.terminal-tabs { display: flex; gap: 4px; }
+.terminal-tabs button {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+  padding: 6px 12px; border-radius: var(--r-sm); transition: all var(--t-fast);
+  border: 1px solid transparent;
+}
+.terminal-tabs button:hover { color: var(--text-1); }
+.terminal-tabs button[aria-selected="true"] {
+  color: var(--flame-400); background: rgba(255,107,26,0.08);
+  border-color: rgba(255,107,26,0.25);
+}
+.terminal-actions { display: flex; gap: 4px; }
+.terminal-actions button {
+  width: 30px; height: 30px; border-radius: var(--r-sm); color: var(--text-3);
+  display: grid; place-items: center; transition: all var(--t-fast);
+}
+.terminal-actions button:hover { color: var(--text-1); background: var(--bg-3); }
+.terminal-actions button svg { width: 14px; height: 14px; }
+.copy-flash { color: var(--accent-green) !important; }
+
+.terminal-body {
+  overflow: auto;
+  max-height: 460px;
+  min-height: 280px;
+}
+.terminal-body pre {
+  margin: 0; padding: var(--space-4) var(--space-5);
+  font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.65;
+  color: var(--text-1);
+  white-space: pre;
+}
+.terminal-body pre code { color: inherit; background: transparent; padding: 0; font-size: inherit; }
+
+/* Syntax highlighting */
+.tok-key { color: #ff8a8a; }      /* keywords */
+.tok-str { color: #7ee0a8; }      /* strings */
+.tok-cmt { color: #6a7180; font-style: italic; }  /* comments */
+.tok-num { color: #ffb86c; }
+.tok-fn  { color: #ffcc6b; }
+.tok-prop{ color: #4fd1c5; }
+.tok-op  { color: #c0c4cc; }
+.tok-var { color: #e4e6eb; }
+
+/* Output panel */
+.output-panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.output-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-1);
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+}
+.output-head .status {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent-green);
+}
+.output-head .status .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+.output-body {
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.65;
+  color: var(--text-2);
+  flex: 1;
+  overflow: auto;
+  max-height: 460px;
+}
+.output-body .out-line { display: flex; gap: var(--space-3); }
+.output-body .out-line .gutter { color: var(--text-4); user-select: none; min-width: 22px; }
+.output-body .json-key { color: var(--flame-300); }
+.output-body .json-str { color: #7ee0a8; }
+.output-body .json-num { color: #ffb86c; }
+.output-body .json-bool { color: #ff8a8a; }
+.output-body .json-null { color: #6a7180; }
+.output-body .label-tag { color: var(--flame-400); font-weight: 600; }
+.output-body .dim { color: var(--text-3); }
+
+/* ============================================================
+   HN STORIES
+============================================================ */
+.stories { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
+.story {
+  position: relative;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  transition: border-color var(--t-fast), transform var(--t-fast), background var(--t-fast);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.story:hover { border-color: var(--border-3); transform: translateY(-2px); background: var(--bg-3); }
+.story-rank {
+  position: absolute; top: -10px; left: var(--space-4);
+  width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 800; font-size: var(--text-sm);
+  background: linear-gradient(135deg, var(--flame-400), var(--flame-600));
+  color: #0b0b0b;
+  box-shadow: 0 6px 18px -4px var(--flame-glow);
+}
+.story-meta-top {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+  padding-left: 44px;
+}
+.story-meta-top .domain { color: var(--flame-300); }
+.story-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg); font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.25;
+}
+.story-title a { transition: color var(--t-fast); }
+.story-title a:hover { color: var(--flame-400); }
+.story-foot {
+  display: flex; gap: var(--space-4); align-items: center; justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-1);
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+}
+.story-stats { display: flex; gap: var(--space-4); }
+.story-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
+.story-stats .stat svg { width: 12px; height: 12px; }
+.story-stats .stat.points { color: var(--flame-300); }
+.story-stats .stat.comments { color: var(--accent-cyan); }
+.story-by a { color: var(--text-2); }
+.story-by a:hover { color: var(--text-1); }
+
+.stories-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-5); flex-wrap: wrap; gap: var(--space-3);
+}
+.stories-head .src {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+  display: inline-flex; align-items: center; gap: var(--space-2);
+}
+.stories-head .src .arrow { color: var(--flame-400); }
+.stories-head .meta {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+}
+
+/* ============================================================
+   FEATURE TILES
+============================================================ */
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
+.feature {
+  padding: var(--space-6);
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  transition: border-color var(--t-fast), transform var(--t-fast);
+}
+.feature:hover { border-color: var(--flame-500); transform: translateY(-2px); }
+.feature-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: rgba(255,107,26,0.1);
+  border: 1px solid rgba(255,107,26,0.2);
+  color: var(--flame-400);
+  margin-bottom: var(--space-4);
+}
+.feature-icon svg { width: 20px; height: 20px; }
+.feature h3 { font-size: var(--text-md); font-family: var(--font-body); font-weight: 700; margin-bottom: var(--space-2); }
+.feature p { color: var(--text-2); font-size: var(--text-sm); line-height: 1.6; margin: 0; }
+
+/* ============================================================
+   SNIPPETS TABS
+============================================================ */
+.snippets {
+  background: var(--bg-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.snippets-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-1);
+  flex-wrap: wrap; gap: var(--space-3);
+}
+.snippets-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.snippets-tabs button {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+  padding: 8px 14px; border-radius: var(--r-sm); transition: all var(--t-fast);
+  border: 1px solid transparent;
+}
+.snippets-tabs button:hover { color: var(--text-1); }
+.snippets-tabs button[aria-selected="true"] {
+  color: var(--flame-400); background: rgba(255,107,26,0.08);
+  border-color: rgba(255,107,26,0.25);
+}
+.snippets-tabs button svg { width: 12px; height: 12px; }
+.snippet-body {
+  max-height: 520px; overflow: auto;
+  background: #07080a;
+}
+.snippet-body pre {
+  margin: 0; padding: var(--space-5) var(--space-6);
+  font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.7;
+  white-space: pre;
+}
+
+/* ============================================================
+   RUNNER (scripted playback of sample run)
+============================================================ */
+.runner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--bg-1);
+}
+@media (max-width: 960px) { .runner { grid-template-columns: 1fr; } }
+.runner-left, .runner-right { min-width: 0; }
+.runner-left { border-right: 1px solid var(--border-1); }
+@media (max-width: 960px) { .runner-left { border-right: 0; border-bottom: 1px solid var(--border-1); } }
+.runner-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-2); border-bottom: 1px solid var(--border-1);
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-3);
+}
+.runner-bar .lhs { display: flex; align-items: center; gap: var(--space-3); }
+.runner-bar .lhs .traffic { display: flex; gap: 6px; }
+.runner-bar .lhs .traffic span { width: 11px; height: 11px; border-radius: 999px; }
+.runner-bar .lhs .traffic span:nth-child(1){ background:#ff5f57;}
+.runner-bar .lhs .traffic span:nth-child(2){ background:#febc2e;}
+.runner-bar .lhs .traffic span:nth-child(3){ background:#28c840;}
+.runner-controls { display: flex; gap: var(--space-2); }
+.runner-controls button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--text-1);
+  padding: 6px 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--border-2); background: var(--bg-3);
+  transition: all var(--t-fast);
+}
+.runner-controls button:hover { border-color: var(--flame-500); color: var(--flame-400); }
+.runner-controls button svg { width: 12px; height: 12px; }
+.runner-controls button.primary { background: linear-gradient(180deg, var(--flame-400), var(--flame-600)); color: #0b0b0b; border-color: transparent; }
+.runner-controls button.primary:hover { color: #0b0b0b; }
+
+.runner-body {
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.7;
+  max-height: 520px; min-height: 420px;
+  overflow: auto;
+}
+.runner-body.code pre { margin: 0; white-space: pre; }
+.runner-body.log { color: var(--text-2); }
+.runner-body.log .line { display: flex; gap: var(--space-3); align-items: flex-start; animation: fadeIn 200ms ease; }
+.runner-body.log .gutter { color: var(--text-4); min-width: 52px; font-size: var(--text-xs); padding-top: 2px; }
+.runner-body.log .line .txt { flex: 1; min-width: 0; word-break: break-word; }
+.runner-body.log .tag { color: var(--flame-400); font-weight: 600; margin-right: var(--space-2); }
+.runner-body.log .ok { color: var(--accent-green); }
+.runner-body.log .info { color: var(--accent-cyan); }
+.runner-body.log .warn { color: var(--accent-yellow); }
+.runner-body.log .dim { color: var(--text-4); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity:1; transform: none;} }
+
+/* Step indicator */
+.runner-steps {
+  padding: var(--space-3) var(--space-5);
+  display: flex; gap: var(--space-2); flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-2);
+}
+.step-chip {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 4px 10px; border-radius: 999px;
+  color: var(--text-3); border: 1px solid var(--border-2); background: var(--bg-3);
+  transition: all var(--t-fast);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.step-chip .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--text-4); }
+.step-chip.active { color: var(--flame-300); border-color: var(--flame-500); background: rgba(255,107,26,0.08); }
+.step-chip.active .dot { background: var(--flame-500); box-shadow: 0 0 8px var(--flame-500); }
+.step-chip.done { color: var(--accent-green); border-color: rgba(16,185,129,0.35); }
+.step-chip.done .dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+/* ============================================================
+   FOOTER
+============================================================ */
+.site-footer {
+  padding: var(--space-10) 0 var(--space-8);
+  border-top: 1px solid var(--border-1);
+  margin-top: var(--space-16);
+  color: var(--text-3); font-size: var(--text-sm);
+}
+.site-footer .row { display: flex; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.site-footer a { color: var(--text-2); }
+.site-footer a:hover { color: var(--flame-400); }
+.site-footer .links { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+
+/* ============================================================
+   MISC
+============================================================ */
+.reveal { opacity: 0; transform: translateY(12px); transition: opacity 500ms ease, transform 500ms ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* Scrollbars */
+.terminal-body::-webkit-scrollbar, .output-body::-webkit-scrollbar, .snippet-body::-webkit-scrollbar, .runner-body::-webkit-scrollbar { width: 10px; height: 10px; }
+.terminal-body::-webkit-scrollbar-track, .output-body::-webkit-scrollbar-track, .snippet-body::-webkit-scrollbar-track, .runner-body::-webkit-scrollbar-track { background: transparent; }
+.terminal-body::-webkit-scrollbar-thumb, .output-body::-webkit-scrollbar-thumb, .snippet-body::-webkit-scrollbar-thumb, .runner-body::-webkit-scrollbar-thumb { background: var(--border-3); border-radius: 999px; }
+</style>
+<script src="./config.js"></script>
+</head>
+
+<body>
+<div class="bg-ambient" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<!-- =============== HEADER =============== -->
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <!-- Flame mark -->
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2c1 3 4 4 4 8a4 4 0 0 1-4 4 4 4 0 0 1-4-4c0-2 1.5-3 2-5 .5 2 2 3 2 3s1-3 0-6z" fill="#fff"/>
+          <path d="M12 22c4 0 7-3 7-7 0-4-3-5-5-9 0 5-5 5-5 10 0 2-1 3-1 3s2 3 4 3z" fill="#0b0b0b" opacity=".35"/>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-name">Firecrawl</span>
+        <span class="brand-sub">Browser Sandbox</span>
+      </div>
+    </div>
+    <nav class="header-nav" aria-label="Primary">
+      <a href="#session">Session</a>
+      <a href="#extraction">Extraction</a>
+      <a href="#runner">Run Code</a>
+      <a href="#features">Features</a>
+      <a href="#snippets">SDKs</a>
+    </nav>
+    <div class="header-status" title="Sandbox region">
+      <span class="pulse-dot" aria-hidden="true"></span>
+      <span id="status-label">verified run · real session</span>
+    </div>
+  </div>
+</header>
+
+<main id="main-content">
+
+  <!-- =============== HERO =============== -->
+  <section class="hero container">
+    <span class="hero-eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>
+      </svg>
+      Verified run · live session data
+    </span>
+    <h1>A secure remote browser for your agents, <span class="grad">controlled by code.</span></h1>
+    <p class="hero-lede">
+      Spin up a disposable Chromium session in the cloud, drive it with Playwright, agent-browser,
+      or raw CDP, and stream results back as clean JSON. Everything you see below came from
+      <strong style="color:var(--flame-300)">one real end-to-end run</strong> against the Firecrawl
+      API — launch, navigate, extract, close — in under 3.5 seconds total.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#runner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5v14l11-7L8 5Z"/></svg>
+        Run the demo
+      </a>
+      <a class="btn btn-ghost" href="https://docs.firecrawl.dev/features/browser" target="_blank" rel="noopener">
+        Read the docs
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+
+    <!-- Session card -->
+    <div class="session-panel reveal" id="session">
+      <div class="session-head">
+        <div class="session-traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h2>Live session · <span style="color:var(--flame-300); font-family:var(--font-mono); font-size: var(--text-sm);" id="session-id-short">—</span></h2>
+        <div class="session-traffic" aria-hidden="true" style="visibility:hidden;"><span></span><span></span><span></span></div>
+      </div>
+      <div class="session-grid">
+        <div class="session-cell">
+          <div class="label">Status</div>
+          <div class="value"><span class="chip"><span class="dot"></span>closed · ok</span></div>
+        </div>
+        <div class="session-cell">
+          <div class="label">Session ID</div>
+          <div class="value" id="session-id">—</div>
+        </div>
+        <div class="session-cell">
+          <div class="label">Region</div>
+          <div class="value" id="session-region">—</div>
+        </div>
+        <div class="session-cell">
+          <div class="label">Run duration</div>
+          <div class="value" id="session-expires">—</div>
+        </div>
+      </div>
+      <div class="session-footer">
+        <div class="urls">
+          <a id="cdp-url" href="#" data-copy>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+            cdpUrl
+          </a>
+          <a id="live-url" href="#" target="_blank" rel="noopener">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            liveView
+          </a>
+          <a id="interactive-url" href="#" target="_blank" rel="noopener">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            interactive
+          </a>
+        </div>
+        <div class="countdown">TTL <strong id="ttl-total">300s</strong> · auto-close after inactivity <strong id="ttl-activity">180s</strong> · launch <strong>628ms</strong> · execute <strong>676ms</strong> · close <strong>2122ms</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== EXTRACTION =============== -->
+  <section class="section container" id="extraction">
+    <div class="section-head">
+      <div class="section-eyebrow">Live extraction</div>
+      <h2>Top 5 Hacker News headlines, pulled by the sandbox.</h2>
+      <p class="section-lede">
+        Below is the actual payload the sandbox returned after navigating to
+        <code style="color:var(--flame-300);">news.ycombinator.com</code>, waiting for the story table,
+        and mapping each row with <code style="color:var(--flame-300);">page.$$eval</code>. Parsed
+        straight from the live <code style="color:var(--flame-300);">result</code> field of
+        <code style="color:var(--flame-300);">POST /v2/browser/:id/execute</code>.
+      </p>
+    </div>
+
+    <div class="stories-head">
+      <div class="src">
+        <span class="arrow">→</span>
+        <code>GET https://news.ycombinator.com</code>
+      </div>
+      <div class="meta" id="extract-meta">—</div>
+    </div>
+
+    <div class="stories" id="stories-grid" role="list"></div>
+  </section>
+
+  <!-- =============== RUNNER =============== -->
+  <section class="section container" id="runner">
+    <div class="section-head">
+      <div class="section-eyebrow">Node.js execution</div>
+      <h2>Execute arbitrary code inside the sandbox.</h2>
+      <p class="section-lede">
+        The <code style="color:var(--flame-300);">browserExecute</code> endpoint streams Node.js, Python, or
+        bash into your session and returns <code style="color:var(--flame-300);">stdout</code>,
+        <code style="color:var(--flame-300);">stderr</code>, and the last expression value. Press play to
+        replay the sample run below.
+      </p>
+    </div>
+
+    <div class="runner" role="region" aria-label="Code runner">
+      <!-- steps -->
+      <div class="runner-bar" style="grid-column: 1 / -1;">
+        <div class="lhs">
+          <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span>sample-run.js · sandbox @ <span id="runner-sid">—</span></span>
+          <span id="run-mode-badge" class="badge" style="margin-left:var(--space-3); font-size:var(--text-xs); padding:2px 10px; background:var(--bg-3); color:var(--text-3); border:1px solid var(--border-2); border-radius:999px;">replay · baked</span>
+        </div>
+        <div class="runner-controls">
+          <button id="btn-run" class="primary" aria-label="Run sample">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg>
+            Run
+          </button>
+          <button id="btn-reset" aria-label="Reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+      <div class="runner-steps" style="grid-column: 1 / -1;" id="runner-steps"></div>
+
+      <!-- left: code -->
+      <div class="runner-left">
+        <div class="runner-body code">
+<pre><code id="run-code"><span class="tok-cmt">// npm install @mendable/firecrawl-js</span>
+<span class="tok-key">import</span> Firecrawl <span class="tok-key">from</span> <span class="tok-str">'@mendable/firecrawl-js'</span>;
+
+<span class="tok-key">const</span> firecrawl = <span class="tok-key">new</span> <span class="tok-fn">Firecrawl</span>({ apiKey: process.env.FIRECRAWL_API_KEY });
+
+<span class="tok-cmt">// 1. Launch a disposable browser session</span>
+<span class="tok-key">const</span> session = <span class="tok-key">await</span> firecrawl.<span class="tok-fn">browser</span>({ ttl: <span class="tok-num">600</span>, activityTtl: <span class="tok-num">300</span> });
+console.<span class="tok-fn">log</span>(<span class="tok-str">'session:'</span>, session.id);
+console.<span class="tok-fn">log</span>(<span class="tok-str">'live view:'</span>, session.liveViewUrl);
+
+<span class="tok-cmt">// 2. Navigate + extract top 5 HN headlines</span>
+<span class="tok-cmt">// Sandbox runs code in a Node REPL: the last expression becomes `result`.</span>
+<span class="tok-key">const</span> extract = <span class="tok-key">await</span> firecrawl.<span class="tok-fn">browserExecute</span>(session.id, {
+  language: <span class="tok-str">'node'</span>,
+  code: <span class="tok-str">`
+    await page.goto('https://news.ycombinator.com', { waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('tr.athing')
+    const hn = await page.$$eval('tr.athing', rows =&gt;
+      rows.slice(0, 5).map((row, i) =&gt; {
+        const link   = row.querySelector('.titleline &gt; a')
+        const sub    = row.nextElementSibling
+        const domain = row.querySelector('.sitestr')?.innerText ?? null
+        const points = parseInt(sub.querySelector('.score')?.innerText) || 0
+        const by     = sub.querySelector('.hnuser')?.innerText ?? null
+        const cmts   = [...sub.querySelectorAll('a')]
+                         .map(a =&gt; a.innerText)
+                         .find(t =&gt; /comment/.test(t)) ?? '0'
+        const age    = sub.querySelector('.age')?.innerText ?? null
+        return { rank: i+1, title: link.innerText, url: link.href,
+                 domain, points, author: by,
+                 comments: parseInt(cmts) || 0, age }
+      })
+    )
+    JSON.stringify(hn)   // last expression → extract.result
+  `</span>,
+});
+
+<span class="tok-key">const</span> stories = <span class="tok-fn">JSON</span>.<span class="tok-fn">parse</span>(extract.result);
+console.<span class="tok-fn">log</span>(stories.length, <span class="tok-str">'stories'</span>);
+
+<span class="tok-cmt">// 3. Always clean up</span>
+<span class="tok-key">await</span> firecrawl.<span class="tok-fn">deleteBrowser</span>(session.id);
+</code></pre>
+        </div>
+      </div>
+
+      <!-- right: output -->
+      <div class="runner-right">
+        <div class="runner-body log" id="run-log" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== FEATURES =============== -->
+  <section class="section container" id="features">
+    <div class="section-head">
+      <div class="section-eyebrow">Capabilities</div>
+      <h2>What a single sandbox session can do.</h2>
+      <p class="section-lede">
+        Each session is a fully isolated Chromium container with Playwright and agent-browser
+        pre-installed. Scale from one browser to hundreds of parallel sessions without touching
+        local infrastructure.
+      </p>
+    </div>
+
+    <div class="features">
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        </div>
+        <h3>Navigate & interact</h3>
+        <p>Full Playwright API: goto, click, type, waitForSelector, screenshots, and downloads — all driven from your own code.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1h-4"/><path d="M8 3v4h8V3"/><path d="m9 14 2 2 4-4"/></svg>
+        </div>
+        <h3>Execute node · python · bash</h3>
+        <p>Send any snippet via <code>POST /v2/browser/:id/execute</code>. Get back <code>stdout</code>, <code>stderr</code>, <code>result</code>, and <code>exitCode</code>.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <h3>Isolated & disposable</h3>
+        <p>Every session runs in a fresh container. No filesystem access, no local network reach, no prompt-injection blast radius.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="m10 10 4 3-4 3Z"/></svg>
+        </div>
+        <h3>Live view + CDP</h3>
+        <p>Watch sessions in real time via an embeddable stream, or connect your own Playwright over <code>wss://</code> CDP for full local control.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21a6 6 0 0 1 12 0"/><circle cx="17" cy="8" r="3"/><path d="M14 21a5 5 0 0 1 7-4.6"/></svg>
+        </div>
+        <h3>Persistent profiles</h3>
+        <p>Give a session a named profile to carry cookies, auth, and localStorage across runs — perfect for logged-in workflows.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 12h10v4H4zM4 20h16"/></svg>
+        </div>
+        <h3>agent-browser CLI</h3>
+        <p>Skip Playwright entirely. Send bash commands like <code>"click @e5"</code> or <code>"snapshot"</code> — 60+ commands pre-installed.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- =============== SNIPPETS =============== -->
+  <section class="section container" id="snippets">
+    <div class="section-head">
+      <div class="section-eyebrow">Integrate</div>
+      <h2>Launch a session in your stack.</h2>
+      <p class="section-lede">Copy-paste equivalents for the Node SDK, Python SDK, the CLI, and raw cURL.</p>
+    </div>
+
+    <div class="snippets">
+      <div class="snippets-head">
+        <div class="snippets-tabs" role="tablist" id="snippet-tabs">
+          <button role="tab" aria-selected="true" data-tab="node">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            Node SDK
+          </button>
+          <button role="tab" aria-selected="false" data-tab="python">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3c-3 0-5 1-5 4v3h5v1H5c-2 0-3 2-3 4s1 4 3 4h2v-2c0-2 2-3 4-3h4c2 0 4-1 4-4V7c0-3-2-4-5-4h-2z"/></svg>
+            Python SDK
+          </button>
+          <button role="tab" aria-selected="false" data-tab="curl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m8 8-5 4 5 4M16 8l5 4-5 4"/></svg>
+            cURL
+          </button>
+          <button role="tab" aria-selected="false" data-tab="cli">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m4 8 4 4-4 4M12 16h8"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+            CLI
+          </button>
+        </div>
+        <div class="terminal-actions">
+          <button id="snippet-copy" aria-label="Copy snippet" title="Copy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="snippet-body">
+        <pre id="snippet-body-pre"></pre>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container row">
+    <div>
+      Built as a demo dashboard for the Firecrawl Browser Sandbox.
+      HN data extracted by a real sandbox session on <span id="ran-at"></span>.
+    </div>
+    <div class="links">
+      <a href="https://docs.firecrawl.dev/features/browser" target="_blank" rel="noopener">Docs</a>
+      <a href="https://docs.firecrawl.dev/api-reference/endpoint/browser-create" target="_blank" rel="noopener">API Reference</a>
+      <a href="https://www.firecrawl.dev/blog/introducing-browser-sandbox" target="_blank" rel="noopener">Announcement</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ==========================================================
+     DATA — baked from the live extraction run
+  ========================================================== */
+  const SESSION = {"success":true,"id":"019dadf9-c89c-7446-91d6-0f8bc7f92745","cdpUrl":"wss://browser.firecrawl.dev/cdp/c8213b88033bfab9?token=1f6e1096edf6ed520b09a25fd9601d082c8c94e2d394168e6972d8f615f0c055","liveViewUrl":"https://liveview.firecrawl.dev/d3NzOi8vYnJvd3Nlci5maXJlY3Jhd2wuZGV2L3NjcmVlbmNhc3QvYzgyMTNiODgwMzNiZmFiOT90b2tlbj0yMGQ4M2U1YTZiMTg1OTJiNTBlMjA1MmM1NGE4YTU2OGE5M2JkZTY4OTA1MzNkMWIwYzk3M2IyYzY0NDQ4MDhj","interactiveLiveViewUrl":"https://liveview.firecrawl.dev/aHR0cHM6Ly9icm93c2VyLmZpcmVjcmF3bC5kZXYvdmlldy9jODIxM2I4ODAzM2JmYWI5Lz90b2tlbj0xZjZlMTA5NmVkZjZlZDUyMGIwOWEyNWZkOTYwMWQwODJjOGM5NGUyZDM5NDE2OGU2OTcyZDhmNjE1ZjBjMDU1","createdAt":"2026-04-21T02:58:41Z","expiresAt":"2026-04-21T03:08:41Z","status":"closed","ttl":600,"activityTtl":300,"region":"firecrawl-cloud"};
+
+  // Live timings captured from the real end-to-end run
+  const TIMINGS = { launch_ms: 628, execute_ms: 676, close_ms: 2122, total_ms: 3426 };
+  const RAN_AT = "2026-04-21T03:00:22Z";
+
+  // Live HN payload extracted by the real Firecrawl Browser Sandbox session above.
+  const STORIES = [
+    {"rank":1,"id":"47840219","title":"John Ternus to become Apple CEO","url":"https://www.apple.com/newsroom/2026/04/tim-cook-to-become-apple-executive-chairman-john-ternus-to-become-apple-ceo/","domain":"apple.com","points":1295,"author":"schappim","comments":646,"age":"6 hours ago"},
+    {"rank":2,"id":"47843715","title":"KV Cache Compression 900000x Beyond TurboQuant and Per-Vector Shannon Limit","url":"https://arxiv.org/abs/2604.15356","domain":"arxiv.org","points":26,"author":"EGreg","comments":4,"age":"46 minutes ago"},
+    {"rank":3,"id":"47843194","title":"How to Make a Fast Dynamic Language Interpreter","url":"https://zef-lang.dev/implementation","domain":"zef-lang.dev","points":53,"author":"pizlonator","comments":2,"age":"2 hours ago"},
+    {"rank":4,"id":"47841129","title":"Jujutsu megamerges for fun and profit","url":"https://isaaccorbrey.com/notes/jujutsu-megamerges-for-fun-and-profit","domain":"isaaccorbrey.com","points":151,"author":"icorbrey","comments":44,"age":"5 hours ago"},
+    {"rank":5,"id":"47834565","title":"Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving","url":"https://qwen.ai/blog?id=qwen3.6-max-preview","domain":"qwen.ai","points":555,"author":"mfiguiere","comments":292,"age":"12 hours ago"}
+  ];
+
+  /* ==========================================================
+     UTILS
+  ========================================================== */
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtNum = n => n.toLocaleString('en-US');
+  // Story age is already provided as a human string by the sandbox run.
+
+  /* ==========================================================
+     SESSION CARD
+  ========================================================== */
+  $('#session-id').textContent = SESSION.id;
+  $('#session-id-short').textContent = SESSION.id.slice(0, 8);
+  $('#session-region').textContent = SESSION.region;
+  $('#cdp-url').textContent = SESSION.cdpUrl.replace(/(token=)([^&]+)/, '$1•••');
+  $('#cdp-url').setAttribute('data-copy-full', SESSION.cdpUrl);
+  $('#live-url').href = SESSION.liveViewUrl;
+  $('#interactive-url').href = SESSION.interactiveLiveViewUrl;
+  $('#ttl-total').textContent = SESSION.ttl + 's';
+  $('#ttl-activity').textContent = SESSION.activityTtl + 's';
+  $('#runner-sid').textContent = SESSION.id.slice(0, 8) + '…';
+
+  // Footer — show when the live run happened
+  const ranDate = new Date(RAN_AT);
+  const ranTxt = ranDate.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+  if ($('#ran-at')) $('#ran-at').textContent = ranTxt;
+
+  // Session is already closed (this was a real one-shot run). Show completion time instead of countdown.
+  $('#session-expires').textContent = `closed · ${(TIMINGS.total_ms/1000).toFixed(2)}s total`;
+
+  // Click-to-copy on CDP url
+  $('#cdp-url').addEventListener('click', (e) => {
+    e.preventDefault();
+    const full = e.currentTarget.getAttribute('data-copy-full');
+    navigator.clipboard.writeText(full).then(() => {
+      const orig = e.currentTarget.textContent;
+      e.currentTarget.textContent = '✓ copied';
+      setTimeout(() => e.currentTarget.textContent = orig, 1400);
+    });
+  });
+
+  /* ==========================================================
+     STORIES GRID
+  ========================================================== */
+  const grid = $('#stories-grid');
+  grid.innerHTML = STORIES.map(s => `
+    <article class="story" role="listitem">
+      <div class="story-rank" aria-label="Rank ${s.rank}">${s.rank}</div>
+      <div class="story-meta-top">
+        ${s.domain ? `<span class="domain">${esc(s.domain)}</span>` : '<span class="dim">news.ycombinator.com</span>'}
+        <span>·</span>
+        <span>${esc(s.age || '')}</span>
+      </div>
+      <h3 class="story-title">
+        <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+      </h3>
+      <div class="story-foot">
+        <div class="story-stats">
+          <span class="stat points" title="Points">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 12h5v10h10V12h5L12 2Z"/></svg>
+            ${fmtNum(s.points)}
+          </span>
+          <span class="stat comments" title="Comments">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z"/></svg>
+            ${fmtNum(s.comments)}
+          </span>
+        </div>
+        <div class="story-by">
+          <a href="https://news.ycombinator.com/user?id=${esc(s.author)}" target="_blank" rel="noopener">@${esc(s.author)}</a>
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  $('#extract-meta').textContent = `${STORIES.length} stories · ${STORIES.reduce((a,s)=>a+s.points,0).toLocaleString()} total points · ${STORIES.reduce((a,s)=>a+s.comments,0).toLocaleString()} total comments · extracted in ${TIMINGS.execute_ms} ms`;
+
+  /* ==========================================================
+     RUNNER — scripted playback
+  ========================================================== */
+  const STEPS = [
+    { id: 'launch',   label: '1 · launch session' },
+    { id: 'navigate', label: '2 · navigate' },
+    { id: 'extract',  label: '3 · extract' },
+    { id: 'close',    label: '4 · close' },
+  ];
+
+  const stepsEl = $('#runner-steps');
+  stepsEl.innerHTML = STEPS.map(s => `
+    <span class="step-chip" data-step="${s.id}"><span class="dot"></span>${s.label}</span>
+  `).join('');
+
+  const logEl = $('#run-log');
+  const btnRun = $('#btn-run');
+  const btnReset = $('#btn-reset');
+
+  let running = false;
+  let timeoutId = null;
+
+  function setStep(stepId, state) {
+    $$('#runner-steps .step-chip').forEach(el => {
+      const id = el.dataset.step;
+      el.classList.remove('active','done');
+      if (id === stepId && state === 'active') el.classList.add('active');
+      if (state === 'done' && STEPS.findIndex(s=>s.id===id) <= STEPS.findIndex(s=>s.id===stepId)) el.classList.add('done');
+    });
+  }
+
+  function logLine(html, gutter = '') {
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.innerHTML = `<span class="gutter">${gutter}</span><span class="txt">${html}</span>`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function clearLog() {
+    logEl.innerHTML = '';
+    $$('#runner-steps .step-chip').forEach(el => el.classList.remove('active','done'));
+  }
+
+  function renderExtractJSON() {
+    // compact JSON preview of the extract result
+    const sample = STORIES.map(s => ({
+      rank: s.rank, title: s.title, points: s.points,
+      author: s.author, comments: s.comments, age: s.age
+    }));
+    const json = JSON.stringify(sample, null, 2);
+    // syntax-ish coloring
+    const colored = esc(json)
+      .replace(/"([^"\\]+)":/g, '<span class="json-key">"$1"</span>:')
+      .replace(/: "([^"\\]*)"/g, ': <span class="json-str">"$1"</span>')
+      .replace(/: (\d+)/g, ': <span class="json-num">$1</span>');
+    return `<pre style="margin:0; white-space:pre-wrap; word-break:break-word;">${colored}</pre>`;
+  }
+
+  const SCRIPT = [
+    { d: 0,    fn: () => { setStep('launch','active'); logLine('<span class="tag">»</span> <span class="info">POST</span> https://api.firecrawl.dev/v2/browser'); } },
+    { d: 260,  fn: () => logLine('<span class="dim">   { ttl: 600, activityTtl: 300 }</span>') },
+    { d: 460,  fn: () => logLine('<span class="ok">← 200 OK</span> <span class="dim">· '+TIMINGS.launch_ms+'ms</span>') },
+    { d: 120,  fn: () => logLine(`   session: <span class="info">${SESSION.id}</span>`) },
+    { d: 80,   fn: () => logLine(`   cdpUrl:  <span class="dim">wss://browser.firecrawl.dev/cdp/c8213b88…</span>`) },
+    { d: 260,  fn: () => { setStep('launch','done'); setStep('navigate','active'); logLine('<span class="tag">»</span> <span class="info">POST</span> /v2/browser/'+SESSION.id.slice(0,8)+'…/execute <span class="dim">· language=node</span>'); } },
+    { d: 220,  fn: () => logLine('<span class="dim">   await page.goto("https://news.ycombinator.com")</span>') },
+    { d: 240,  fn: () => logLine('<span class="dim">   await page.waitForSelector("tr.athing")</span>') },
+    { d: 220,  fn: () => { setStep('navigate','done'); setStep('extract','active'); logLine('<span class="dim">   await page.$$eval("tr.athing", ...)</span>'); } },
+    { d: 200,  fn: () => logLine('<span class="ok">← 200 OK</span> <span class="dim">· '+TIMINGS.execute_ms+'ms · exitCode 0 · '+STORIES.length+' rows</span>') },
+    { d: 140,  fn: () => logLine('result:') },
+    { d: 60,   fn: () => {
+      const pre = document.createElement('div');
+      pre.className = 'line';
+      pre.innerHTML = `<span class="gutter">   </span><span class="txt">${renderExtractJSON()}</span>`;
+      logEl.appendChild(pre);
+      logEl.scrollTop = logEl.scrollHeight;
+    } },
+    { d: 260,  fn: () => { setStep('extract','done'); setStep('close','active'); logLine('<span class="tag">»</span> <span class="info">DELETE</span> /v2/browser/'+SESSION.id.slice(0,8)+'…'); } },
+    { d: 240,  fn: () => logLine('<span class="ok">← 200</span> <span class="dim">{ success: true } · '+TIMINGS.close_ms+'ms</span>') },
+    { d: 120,  fn: () => { setStep('close','done'); logLine('<span class="ok">✓ done</span> <span class="dim">· total '+(TIMINGS.total_ms/1000).toFixed(2)+'s</span>'); running = false; btnRun.disabled = false; btnRun.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg> Run again`; } },
+  ];
+
+  /* ==========================================================
+     PROXY CONFIG — enables real-time sandbox runs if deployed
+     ( ?proxy= query overrides window.FIRECRAWL_PROXY )
+  ========================================================== */
+  const qp = new URLSearchParams(location.search);
+  const PROXY_URL = (qp.get('proxy') || window.FIRECRAWL_PROXY || '').replace(/\/$/, '');
+  const LIVE_MODE = !!PROXY_URL;
+
+  const modeBadge = $('#run-mode-badge');
+  if (modeBadge) {
+    if (LIVE_MODE) {
+      modeBadge.textContent = 'live · proxy connected';
+      modeBadge.style.color = 'var(--accent-green)';
+      modeBadge.style.borderColor = 'rgba(16,185,129,.45)';
+      modeBadge.style.background = 'rgba(16,185,129,.08)';
+    }
+  }
+
+  /* --- code executed inside the sandbox; the last expression becomes result --- */
+  const SANDBOX_CODE = `
+    await page.goto('https://news.ycombinator.com', { waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('tr.athing')
+    const hn = await page.$$eval('tr.athing', rows =>
+      rows.slice(0, 5).map((row, i) => {
+        const link   = row.querySelector('.titleline > a')
+        const sub    = row.nextElementSibling
+        const domain = row.querySelector('.sitestr')?.innerText ?? null
+        const points = parseInt(sub.querySelector('.score')?.innerText) || 0
+        const by     = sub.querySelector('.hnuser')?.innerText ?? null
+        const cmts   = [...sub.querySelectorAll('a')].map(a => a.innerText)
+                         .find(t => /comment/.test(t)) ?? '0'
+        const age    = sub.querySelector('.age')?.innerText ?? null
+        return { rank: i+1, title: link.innerText, url: link.href,
+                 domain, points, author: by, comments: parseInt(cmts) || 0, age }
+      })
+    )
+    JSON.stringify(hn)
+  `;
+
+  async function runLive() {
+    if (running) return;
+    running = true;
+    clearLog();
+    btnRun.disabled = true;
+    btnRun.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83"/></svg> Running…`;
+
+    let sessionId = null;
+    const t0 = performance.now();
+    try {
+      /* --- 1. launch --- */
+      setStep('launch','active');
+      logLine('<span class="tag">»</span> <span class="info">POST</span> ' + PROXY_URL + '/api/launch');
+      logLine('<span class="dim">   { ttl: 300, activityTtl: 180 }</span>');
+      const tL0 = performance.now();
+      const rL = await fetch(PROXY_URL + '/api/launch', {
+        method: 'POST', headers: {'content-type':'application/json'},
+        body: JSON.stringify({ ttl: 300, activityTtl: 180 }),
+      });
+      const launchBody = await rL.json();
+      const launchMs = Math.round(performance.now() - tL0);
+      if (!rL.ok || !launchBody.id) throw new Error('launch failed: ' + (launchBody.error || rL.status));
+      sessionId = launchBody.id;
+      $('#runner-sid').textContent = sessionId.slice(0,8) + '…';
+      logLine('<span class="ok">← 200 OK</span> <span class="dim">· ' + launchMs + 'ms</span>');
+      logLine('   session: <span class="info">' + sessionId + '</span>');
+      if (launchBody.liveViewUrl) logLine('   liveView: <a href="' + launchBody.liveViewUrl + '" target="_blank" style="color:var(--flame-400)">open</a>');
+      setStep('launch','done');
+
+      /* --- 2. navigate + extract --- */
+      setStep('navigate','active');
+      logLine('<span class="tag">»</span> <span class="info">POST</span> ' + PROXY_URL + '/api/execute/' + sessionId.slice(0,8) + '… <span class="dim">· language=node</span>');
+      logLine('<span class="dim">   await page.goto("https://news.ycombinator.com")</span>');
+      logLine('<span class="dim">   await page.waitForSelector("tr.athing")</span>');
+      setStep('navigate','done'); setStep('extract','active');
+      logLine('<span class="dim">   await page.$$eval("tr.athing", ...)</span>');
+      const tE0 = performance.now();
+      const rE = await fetch(PROXY_URL + '/api/execute/' + sessionId, {
+        method: 'POST', headers: {'content-type':'application/json'},
+        body: JSON.stringify({ language: 'node', code: SANDBOX_CODE, timeout: 60 }),
+      });
+      const execBody = await rE.json();
+      const execMs = Math.round(performance.now() - tE0);
+      if (!rE.ok) throw new Error('execute failed: ' + (execBody.error || rE.status));
+
+      let liveStories = [];
+      try { liveStories = JSON.parse(execBody.result || '[]'); } catch { liveStories = []; }
+      logLine('<span class="ok">← 200 OK</span> <span class="dim">· ' + execMs + 'ms · exitCode ' + (execBody.exitCode ?? 0) + ' · ' + liveStories.length + ' rows</span>');
+      logLine('result:');
+      const pre = document.createElement('div');
+      pre.className = 'line';
+      const sample = liveStories.map(s => ({ rank: s.rank, title: s.title, points: s.points, author: s.author, comments: s.comments, age: s.age }));
+      const json = JSON.stringify(sample, null, 2);
+      const colored = esc(json)
+        .replace(/"([^"\\]+)":/g, '<span class="json-key">"$1"</span>:')
+        .replace(/: "([^"\\]*)"/g, ': <span class="json-str">"$1"</span>')
+        .replace(/: (\d+)/g, ': <span class="json-num">$1</span>');
+      pre.innerHTML = '<span class="gutter">   </span><span class="txt"><pre style="margin:0; white-space:pre-wrap; word-break:break-word;">' + colored + '</pre></span>';
+      logEl.appendChild(pre);
+      logEl.scrollTop = logEl.scrollHeight;
+      setStep('extract','done');
+
+      /* --- 3. close --- */
+      setStep('close','active');
+      logLine('<span class="tag">»</span> <span class="info">DELETE</span> ' + PROXY_URL + '/api/close/' + sessionId.slice(0,8) + '…');
+      const tC0 = performance.now();
+      const rC = await fetch(PROXY_URL + '/api/close/' + sessionId, { method: 'DELETE' });
+      const closeMs = Math.round(performance.now() - tC0);
+      try { await rC.json(); } catch {}
+      logLine('<span class="ok">← ' + rC.status + '</span> <span class="dim">{ success: true } · ' + closeMs + 'ms</span>');
+      setStep('close','done');
+
+      const totalMs = Math.round(performance.now() - t0);
+      logLine('<span class="ok">✓ done</span> <span class="dim">· total ' + (totalMs/1000).toFixed(2) + 's · live run</span>');
+    } catch (err) {
+      logLine('<span class="warn">✗ ' + esc(String(err.message || err)) + '</span>');
+      /* best-effort cleanup if we launched successfully */
+      if (sessionId) {
+        try { await fetch(PROXY_URL + '/api/close/' + sessionId, { method: 'DELETE' }); } catch {}
+      }
+    } finally {
+      running = false;
+      btnRun.disabled = false;
+      btnRun.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg> Run again';
+    }
+  }
+
+  function runReplay() {
+    if (running) return;
+    running = true;
+    clearLog();
+    btnRun.disabled = true;
+    btnRun.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83"/></svg> Running…`;
+
+    let total = 0;
+    SCRIPT.forEach(step => {
+      total += step.d;
+      setTimeout(() => { if (running) step.fn(); }, total);
+    });
+  }
+
+  function runScript() { return LIVE_MODE ? runLive() : runReplay(); }
+
+  function resetScript() {
+    running = false;
+    clearLog();
+    btnRun.disabled = false;
+    btnRun.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg> Run`;
+    const msg = LIVE_MODE
+      ? 'press <strong style="color:var(--flame-400)">Run</strong> — this will spin up a fresh, disposable sandbox via the proxy'
+      : 'press <strong style="color:var(--flame-400)">Run</strong> to replay the last verified end-to-end run — deploy the proxy to enable live mode';
+    logLine('<span class="dim">' + msg + '</span>');
+  }
+
+  btnRun.addEventListener('click', runScript);
+  btnReset.addEventListener('click', resetScript);
+
+  resetScript();
+  // Auto-play the replay once on load only when not in live mode (live mode costs credits)
+  if (!LIVE_MODE) setTimeout(runScript, 900);
+
+  /* ==========================================================
+     SNIPPETS TABS
+  ========================================================== */
+  const SNIPPETS = {
+    node: `// npm install @mendable/firecrawl-js
+import Firecrawl from '@mendable/firecrawl-js';
+
+const firecrawl = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
+
+// 1. Launch
+const session = await firecrawl.browser({ ttl: 600, activityTtl: 300 });
+
+// 2. Execute Node.js inside the sandbox
+//    The last expression becomes \`result\` on the response.
+const res = await firecrawl.browserExecute(session.id, {
+  language: 'node',
+  code: \`
+    await page.goto('https://news.ycombinator.com')
+    await page.waitForSelector('tr.athing')
+    const hn = await page.$$eval('tr.athing', rs =>
+      rs.slice(0, 5).map((r, i) => ({
+        rank: i + 1,
+        title: r.querySelector('.titleline > a').innerText,
+      }))
+    )
+    JSON.stringify(hn)
+  \`,
+});
+
+const stories = JSON.parse(res.result);
+console.log(stories);
+
+// 3. Cleanup
+await firecrawl.deleteBrowser(session.id);`,
+
+    python: `# pip install firecrawl-py
+from firecrawl import Firecrawl
+
+fc = Firecrawl(api_key="fc-YOUR-API-KEY")
+
+# 1. Launch
+session = fc.browser(ttl=300, activity_ttl=180)
+
+# 2. Execute Python inside the sandbox
+res = fc.browser_execute(session.id, language="python", code="""
+await page.goto("https://news.ycombinator.com")
+rows = await page.query_selector_all("tr.athing")
+stories = []
+for i, row in enumerate(rows[:5]):
+    link = await row.query_selector(".titleline > a")
+    stories.append({
+        "rank": i + 1,
+        "title": await link.inner_text(),
+        "url":   await link.get_attribute("href"),
+    })
+print(stories)
+""")
+
+print(res.stdout)
+
+# 3. Cleanup
+fc.delete_browser(session.id)`,
+
+    curl: `# 1. Create session
+SESSION=$(curl -s -X POST "https://api.firecrawl.dev/v2/browser" \\
+  -H "Authorization: Bearer $FIRECRAWL_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "ttl": 300, "activityTtl": 180 }' | jq -r '.id')
+
+echo "session: $SESSION"
+
+# 2. Execute Node.js inside it
+curl -s -X POST "https://api.firecrawl.dev/v2/browser/$SESSION/execute" \\
+  -H "Authorization: Bearer $FIRECRAWL_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d @- <<'JSON'
+{
+  "language": "node",
+  "code": "await page.goto('https://news.ycombinator.com'); const titles = await page.$$eval('.titleline > a', a => a.slice(0,5).map(x => x.innerText)); return titles;"
+}
+JSON
+
+# 3. Close
+curl -s -X DELETE "https://api.firecrawl.dev/v2/browser/$SESSION" \\
+  -H "Authorization: Bearer $FIRECRAWL_API_KEY"`,
+
+    cli: `# Install once
+npm install -g firecrawl-cli
+export FIRECRAWL_API_KEY=fc-...
+
+# Quick one-liner — agent-browser bash commands
+firecrawl browser "open https://news.ycombinator.com"
+firecrawl browser "snapshot"
+firecrawl browser "extract 'top 5 story titles with points and authors'"
+
+# Or execute a Node script in the current session
+firecrawl browser execute --language node --file ./extract-hn.js
+
+# List / clean up
+firecrawl browser list
+firecrawl browser close --all`,
+  };
+
+  const snippetPre = $('#snippet-body-pre');
+  const snippetTabs = $$('#snippet-tabs button');
+  const copyBtn = $('#snippet-copy');
+
+  function setSnippet(tab) {
+    snippetTabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false'));
+    snippetPre.textContent = SNIPPETS[tab] || '';
+  }
+  snippetTabs.forEach(b => b.addEventListener('click', () => setSnippet(b.dataset.tab)));
+  setSnippet('node');
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(snippetPre.textContent).then(() => {
+      copyBtn.classList.add('copy-flash');
+      setTimeout(() => copyBtn.classList.remove('copy-flash'), 1200);
+    });
+  });
+
+  /* ==========================================================
+     REVEAL-ON-SCROLL
+  ========================================================== */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  $$('.reveal').forEach(el => io.observe(el));
+
+})();
+</script>
+</body>
+</html>

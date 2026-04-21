@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+worker/node_modules/
+
+# wrangler state
+.wrangler/
+worker/.wrangler/
+.dev.vars
+worker/.dev.vars
+
+# env
+.env
+.env.*
+!.env.example
+
+# build artifacts / logs
+*.log
+dist/
+build/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp

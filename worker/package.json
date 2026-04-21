@@ -1,0 +1,15 @@
+{
+  "name": "firecrawl-sandbox-proxy",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "secret": "wrangler secret put FIRECRAWL_API_KEY"
+  },
+  "devDependencies": {
+    "wrangler": "^3.95.0"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "session": {
+    "success": true,
+    "id": "019dadf9-c89c-7446-91d6-0f8bc7f92745",
+    "cdpUrl": "wss://browser.firecrawl.dev/cdp/c8213b88033bfab9?token=1f6e1096edf6ed520b09a25fd9601d082c8c94e2d394168e6972d8f615f0c055",
+    "liveViewUrl": "https://liveview.firecrawl.dev/d3NzOi8vYnJvd3Nlci5maXJlY3Jhd2wuZGV2L3NjcmVlbmNhc3QvYzgyMTNiODgwMzNiZmFiOT90b2tlbj0yMGQ4M2U1YTZiMTg1OTJiNTBlMjA1MmM1NGE4YTU2OGE5M2JkZTY4OTA1MzNkMWIwYzk3M2IyYzY0NDQ4MDhj",
+    "interactiveLiveViewUrl": "https://liveview.firecrawl.dev/aHR0cHM6Ly9icm93c2VyLmZpcmVjcmF3bC5kZXYvdmlldy9jODIxM2I4ODAzM2JmYWI5Lz90b2tlbj0xZjZlMTA5NmVkZjZlZDUyMGIwOWEyNWZkOTYwMWQwODJjOGM5NGUyZDM5NDE2OGU2OTcyZDhmNjE1ZjBjMDU1",
+    "expiresAt": "2026-04-21T03:08:41.555Z"
+  },
+  "timings": {
+    "launch_ms": 628,
+    "execute_ms": 676,
+    "close_ms": 2122,
+    "total_ms": 3426
+  },
+  "stories": [
+    {
+      "rank": 1,
+      "id": "47840219",
+      "title": "John Ternus to become Apple CEO",
+      "url": "https://www.apple.com/newsroom/2026/04/tim-cook-to-become-apple-executive-chairman-john-ternus-to-become-apple-ceo/",
+      "domain": "apple.com",
+      "points": 1295,
+      "author": "schappim",
+      "comments": 646,
+      "age": "6 hours ago"
+    },
+    {
+      "rank": 2,
+      "id": "47843715",
+      "title": "KV Cache Compression 900000x Beyond TurboQuant and Per-Vector Shannon Limit",
+      "url": "https://arxiv.org/abs/2604.15356",
+      "domain": "arxiv.org",
+      "points": 26,
+      "author": "EGreg",
+      "comments": 4,
+      "age": "46 minutes ago"
+    },
+    {
+      "rank": 3,
+      "id": "47843194",
+      "title": "How to Make a Fast Dynamic Language Interpreter",
+      "url": "https://zef-lang.dev/implementation",
+      "domain": "zef-lang.dev",
+      "points": 53,
+      "author": "pizlonator",
+      "comments": 2,
+      "age": "2 hours ago"
+    },
+    {
+      "rank": 4,
+      "id": "47841129",
+      "title": "Jujutsu megamerges for fun and profit",
+      "url": "https://isaaccorbrey.com/notes/jujutsu-megamerges-for-fun-and-profit",
+      "domain": "isaaccorbrey.com",
+      "points": 151,
+      "author": "icorbrey",
+      "comments": 44,
+      "age": "5 hours ago"
+    },
+    {
+      "rank": 5,
+      "id": "47834565",
+      "title": "Qwen3.6-Max-Preview: Smarter, Sharper, Still Evolving",
+      "url": "https://qwen.ai/blog?id=qwen3.6-max-preview",
+      "domain": "qwen.ai",
+      "points": 555,
+      "author": "mfiguiere",
+      "comments": 292,
+      "age": "12 hours ago"
+    }
+  ],
+  "ran_at": "2026-04-21T03:00:22.456466+00:00"
+}

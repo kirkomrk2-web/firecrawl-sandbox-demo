@@ -1,0 +1,26 @@
+name = "firecrawl-sandbox-proxy"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+# Set these with Cloudflare dashboard or the wrangler CLI — never commit them.
+#
+#   wrangler secret put FIRECRAWL_API_KEY
+#
+# Public vars (safe to commit):
+[vars]
+ALLOWED_ORIGINS = "*"   # tighten to your hosted origin(s), comma-separated
+RL_LIMIT = "10"         # requests per RL_WINDOW_SEC per IP
+RL_WINDOW_SEC = "60"
+
+# Optional — enables cross-isolate rate limiting. Create with:
+#   wrangler kv namespace create firecrawl_rl
+# then paste the returned id here and uncomment.
+#
+# [[kv_namespaces]]
+# binding = "RL"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Uncomment to deploy to a custom route instead of workers.dev:
+# [[routes]]
+# pattern = "firecrawl-proxy.example.com/*"
+# zone_name = "example.com"
