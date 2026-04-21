@@ -1,0 +1,175 @@
+name: Nightly proxy smoke test
+
+# Runs every night and on demand. Failures post to the Slack webhook
+# configured as SLACK_WEBHOOK_URL (channel: #infra-alerts).
+#
+# Required repo secrets:
+#   PROXY_URL          https://firecrawl-sandbox-proxy.<account>.workers.dev
+#   SLACK_WEBHOOK_URL  Slack incoming webhook for #infra-alerts
+#
+# Optional:
+#   Uses built-in GITHUB_TOKEN to file an issue when Slack isn't reachable,
+#   so you always have a paper trail even if the webhook breaks.
+
+on:
+  schedule:
+    # 02:00 UTC nightly = 05:00 EEST — quiet window on HN, low contention.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      proxy_url_override:
+        description: 'Override PROXY_URL for this run (optional)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nightly-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Live end-to-end check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate required secrets
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: |
+          if [ -z "${{ github.event.inputs.proxy_url_override }}" ] && [ -z "$PROXY_URL" ]; then
+            echo "::error::PROXY_URL secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Run smoke test
+        id: smoke
+        env:
+          PROXY_URL: ${{ github.event.inputs.proxy_url_override || secrets.PROXY_URL }}
+          TIMEOUT_MS: '60000'
+          MIN_ROWS: '5'
+        run: |
+          set +e
+          node smoke/run.mjs > smoke-report.json
+          ec=$?
+          echo "exitcode=$ec" >> "$GITHUB_OUTPUT"
+          cat smoke-report.json
+          exit $ec
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report-${{ github.run_id }}
+          path: smoke-report.json
+          retention-days: 14
+
+      # ---------- Slack alert on failure ----------
+      - name: Build Slack payload
+        if: failure()
+        id: payload
+        run: |
+          node - <<'EOF' > slack.json
+          const fs = require('fs');
+          let r = {};
+          try { r = JSON.parse(fs.readFileSync('smoke-report.json', 'utf8')); } catch {}
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const failedStep = Object.entries(r.steps || {}).find(([, s]) => s && s.ok === false);
+          const stepName = failedStep ? failedStep[0] : 'unknown';
+          const stepErr = failedStep ? failedStep[1].error : (r.error?.message || 'smoke test failed');
+          const duration = r.durationMs ? (r.durationMs / 1000).toFixed(2) + 's' : '?';
+
+          const payload = {
+            text: `:rotating_light: Firecrawl Sandbox proxy smoke FAILED (${stepName})`,
+            blocks: [
+              {
+                type: 'header',
+                text: { type: 'plain_text', text: ':rotating_light: Firecrawl Sandbox proxy smoke FAILED' },
+              },
+              {
+                type: 'section',
+                fields: [
+                  { type: 'mrkdwn', text: `*Failed step:*\n\`${stepName}\`` },
+                  { type: 'mrkdwn', text: `*Duration:*\n${duration}` },
+                  { type: 'mrkdwn', text: `*Proxy:*\n\`${r.proxy || process.env.PROXY_URL || '?'}\`` },
+                  { type: 'mrkdwn', text: `*Repo:*\n<${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}|${process.env.GITHUB_REPOSITORY}>` },
+                ],
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: '*Error:*\n```' + String(stepErr).slice(0, 1800) + '```',
+                },
+              },
+              {
+                type: 'actions',
+                elements: [
+                  { type: 'button', text: { type: 'plain_text', text: 'View run' }, url: runUrl, style: 'danger' },
+                  { type: 'button', text: { type: 'plain_text', text: 'Open repo' }, url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}` },
+                ],
+              },
+              {
+                type: 'context',
+                elements: [
+                  { type: 'mrkdwn', text: `Run <${runUrl}|#${process.env.GITHUB_RUN_NUMBER}> on <${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/tree/${process.env.GITHUB_REF_NAME}|\`${process.env.GITHUB_REF_NAME}\`> · ${new Date().toISOString()}` },
+                ],
+              },
+            ],
+          };
+          fs.writeFileSync('slack.json', JSON.stringify(payload));
+          EOF
+          echo "payload=$(cat slack.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack (#infra-alerts)
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        id: slack
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: ./slack.json
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Paper-trail fallback: if Slack wasn't configured or the post failed,
+      # file a GitHub issue so the failure isn't lost.
+      - name: File GitHub issue (fallback)
+        if: failure() && (env.SLACK_WEBHOOK_URL == '' || steps.slack.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          TITLE="Nightly smoke test failed — run #${GITHUB_RUN_NUMBER}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          BODY=$(cat <<EOF
+          The nightly Firecrawl Sandbox proxy smoke test failed.
+
+          **Run:** [${GITHUB_RUN_NUMBER}](${RUN_URL})
+          **Branch:** \`${GITHUB_REF_NAME}\`
+          **When:** $(date -u +'%Y-%m-%d %H:%M:%SZ')
+
+          <details><summary>Full report</summary>
+
+          \`\`\`json
+          $(cat smoke-report.json)
+          \`\`\`
+
+          </details>
+          EOF
+          )
+          gh issue create \
+            --title "$TITLE" \
+            --body "$BODY" \
+            --label smoke-failure,automated || true

@@ -210,6 +210,75 @@ PRs welcome — especially for:
 
 ---
 
+## 7. Nightly smoke test + Slack alerts
+
+`smoke/run.mjs` drives the deployed proxy end-to-end every night (`02:00 UTC` / `05:00 EEST`) via `.github/workflows/nightly-smoke.yml`. It runs **health → launch → execute → close** against your public proxy URL, asserts the payload shape (5 non-empty HN rows with numeric points and valid URLs), and posts to Slack only on failure — green runs stay silent.
+
+### What the alert looks like
+
+A Block-Kit message in `#infra-alerts` with:
+
+- `:rotating_light:` header
+- Failed step name, duration, proxy URL, repo link
+- First 1,800 chars of the error in a code block
+- `View run` button straight to the GitHub Actions run
+- Footer context with run number, branch, and ISO timestamp
+
+If Slack isn't configured (or the webhook post fails), the workflow **files a GitHub issue** labelled `smoke-failure,automated` as a paper-trail fallback. The full JSON report is also attached to every run as an artifact (`smoke-report-<run_id>`) and retained for 14 days.
+
+### Required repo secrets
+
+| Secret              | Where to get it                                                                 |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `PROXY_URL`         | The workers.dev URL Wrangler printed after `npx wrangler deploy`               |
+| `SLACK_WEBHOOK_URL` | Slack → Apps → *Incoming Webhooks* → *Add to Slack* → pick `#infra-alerts`      |
+
+```bash
+# with the gh CLI:
+gh secret set PROXY_URL         --body 'https://firecrawl-sandbox-proxy.<account>.workers.dev'
+gh secret set SLACK_WEBHOOK_URL --body 'https://hooks.slack.com/services/T.../B.../...'
+```
+
+### Creating the Slack webhook (once)
+
+1. Visit <https://api.slack.com/apps> → **Create New App** → *From scratch*.
+2. Name it something like `Firecrawl Smoke Test`, pick your workspace.
+3. Features → **Incoming Webhooks** → toggle **On**.
+4. **Add New Webhook to Workspace** → pick `#infra-alerts` → *Allow*.
+5. Copy the `https://hooks.slack.com/services/...` URL into the `SLACK_WEBHOOK_URL` secret.
+
+> The webhook is channel-scoped. Each `#channel` needs its own webhook if you want to route to more than one.
+
+### Running it by hand
+
+```bash
+# local dev — point at your local Node proxy
+PROXY_URL=http://localhost:8787 node smoke/run.mjs
+
+# on GitHub — Actions tab → Nightly proxy smoke test → Run workflow
+# (you can pass a PROXY_URL override from the manual dispatch form)
+```
+
+A green baseline run on my side: launch 945ms · execute 1482ms · close 1535ms = **4.02s end-to-end**.
+
+### Tuning
+
+| Env var       | Default | Effect                                             |
+| ------------- | ------- | -------------------------------------------------- |
+| `TIMEOUT_MS`  | 45000   | Per-request deadline for fetch()                   |
+| `MIN_ROWS`    | 5       | Minimum HN rows to accept before failing the run   |
+
+Cron is a single line — change the schedule in `.github/workflows/nightly-smoke.yml`:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 2 * * *'      # 02:00 UTC daily
+    # - cron: '0 */6 * * *'  # every 6 hours
+```
+
+---
+
 ## License
 
 MIT. Firecrawl itself is a third-party service — check [their pricing & ToS](https://firecrawl.dev) before wiring this up in production.
