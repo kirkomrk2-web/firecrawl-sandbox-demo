@@ -20,11 +20,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
 
       - name: Install deps
         run: npm install --no-audit --no-fund
+        # No package-lock.json checked in for the worker, so we use
+        # `npm install` (not `npm ci`) and skip the npm cache.
 
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3

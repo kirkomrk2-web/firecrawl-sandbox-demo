@@ -44,16 +44,21 @@ jobs:
           node-version: '20'
 
       - name: Validate required secrets
+        id: gate
         env:
           PROXY_URL: ${{ secrets.PROXY_URL }}
+          PROXY_URL_OVERRIDE: ${{ github.event.inputs.proxy_url_override }}
         run: |
-          if [ -z "${{ github.event.inputs.proxy_url_override }}" ] && [ -z "$PROXY_URL" ]; then
-            echo "::error::PROXY_URL secret is not set. Add it under Settings → Secrets and variables → Actions."
-            exit 1
+          if [ -z "$PROXY_URL_OVERRIDE" ] && [ -z "$PROXY_URL" ]; then
+            echo "::warning::PROXY_URL secret not set. Skipping smoke test. Configure under Settings → Secrets and variables → Actions to enable."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run smoke test
         id: smoke
+        if: steps.gate.outputs.skip == 'false'
         env:
           PROXY_URL: ${{ github.event.inputs.proxy_url_override || secrets.PROXY_URL }}
           TIMEOUT_MS: '60000'
@@ -67,7 +72,7 @@ jobs:
           exit $ec
 
       - name: Upload report artifact
-        if: always()
+        if: always() && steps.gate.outputs.skip == 'false' && hashFiles('smoke-report.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: smoke-report-${{ github.run_id }}
@@ -76,7 +81,7 @@ jobs:
 
       # ---------- Slack alert on failure ----------
       - name: Build Slack payload
-        if: failure()
+        if: failure() && steps.gate.outputs.skip == 'false'
         id: payload
         run: |
           node - <<'EOF' > slack.json
@@ -132,7 +137,7 @@ jobs:
           echo "payload=$(cat slack.json)" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack (#infra-alerts)
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        if: failure() && steps.gate.outputs.skip == 'false' && env.SLACK_WEBHOOK_URL != ''
         id: slack
         continue-on-error: true
         uses: slackapi/slack-github-action@v2.1.1
@@ -146,7 +151,7 @@ jobs:
       # Paper-trail fallback: if Slack wasn't configured or the post failed,
       # file a GitHub issue so the failure isn't lost.
       - name: File GitHub issue (fallback)
-        if: failure() && (env.SLACK_WEBHOOK_URL == '' || steps.slack.outcome == 'failure')
+        if: failure() && steps.gate.outputs.skip == 'false' && (env.SLACK_WEBHOOK_URL == '' || steps.slack.outcome == 'failure')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
