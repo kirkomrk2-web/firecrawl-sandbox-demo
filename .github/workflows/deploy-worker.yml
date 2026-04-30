@@ -8,6 +8,9 @@ on:
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,13 +23,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
 
       - name: Install deps
         run: npm install --no-audit --no-fund
+        # No package-lock.json checked in for the worker, so we use
+        # `npm install` (not `npm ci`) and skip the npm cache.
+
+      - name: Skip when Cloudflare credentials missing
+        id: gate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID not set; skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy to Cloudflare
+        if: steps.gate.outputs.skip == 'false'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
